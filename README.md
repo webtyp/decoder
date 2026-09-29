@@ -1,4 +1,5 @@
 # decoder
+<img src="docs/img/badges.svg">
 
 The causal decoder of webtyp's in-browser language models, in Go for TinyGo/WASM. Token ids go
 in, and the logits of the next token come out, one token at a time, with the state the model
