@@ -3,8 +3,9 @@ PLAN: "feat: decoder — Qwen3.5 hybrid causal decoder in plain Go (Gated DeltaN
 TAG: v0.1.0
 EXECUTOR: jules
 REVIEWER: none
-STATUS: running
+STATUS: review
 SESSION: 15261525408189116169
+PR: https://github.com/webtyp/decoder/pull/1
 ---
 
 > This plan is dispatched via the CodeJob workflow. See skill: agents-workflow.
