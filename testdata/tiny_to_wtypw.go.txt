@@ -1,0 +1,46 @@
+package main
+
+import (
+	"encoding/binary"
+	"fmt"
+	"math"
+	"os"
+	"sort"
+
+	"webtyp.com/weights"
+	"webtyp.com/weightsc"
+)
+
+func main() {
+	in, out := os.Args[1], os.Args[2]
+	st, err := weightsc.OpenSafetensors(in)
+	if err != nil {
+		panic(err)
+	}
+	defer st.Close()
+	var names []string
+	for n := range st.Tensors {
+		names = append(names, n)
+	}
+	sort.Strings(names)
+	var inputs []weights.TensorInput
+	for _, n := range names {
+		f, shape, err := st.ReadTensorFloat32(n)
+		if err != nil {
+			panic(err)
+		}
+		data := make([]byte, len(f)*4)
+		for i, v := range f {
+			binary.LittleEndian.PutUint32(data[i*4:], math.Float32bits(v))
+		}
+		inputs = append(inputs, weights.TensorInput{Name: n, DType: weights.Float32, Shape: shape, Data: data})
+	}
+	b, err := weights.WriteArtifact("qwen3.5-tiny-fixture", 1, weights.TokenizerConfig{}, inputs)
+	if err != nil {
+		panic(err)
+	}
+	if err := os.WriteFile(out, b, 0644); err != nil {
+		panic(err)
+	}
+	fmt.Println("tensors", len(inputs), "bytes", len(b))
+}
