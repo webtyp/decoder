@@ -1,4 +1,4 @@
-package decoder_test
+package tests
 
 import (
 	"os"
@@ -9,7 +9,7 @@ import (
 )
 
 func TestNew_MissingAndSizeError(t *testing.T) {
-	data, err := os.ReadFile("testdata/tiny/model.wtypw")
+	data, err := os.ReadFile("../testdata/tiny/model.wtypw")
 	if err != nil {
 		t.Fatalf("failed to read test artifact: %v", err)
 	}

@@ -1,4 +1,4 @@
-package decoder_test
+package tests
 
 import (
 	"encoding/json"
@@ -40,7 +40,7 @@ func tinyConfig() decoder.Config {
 
 func loadTinyModel(t *testing.T) *decoder.Model {
 	t.Helper()
-	data, err := os.ReadFile("testdata/tiny/model.wtypw")
+	data, err := os.ReadFile("../testdata/tiny/model.wtypw")
 	if err != nil {
 		t.Fatalf("failed to read model file: %v", err)
 	}
@@ -58,7 +58,7 @@ func loadTinyModel(t *testing.T) *decoder.Model {
 
 func loadReference(t *testing.T) referenceData {
 	t.Helper()
-	data, err := os.ReadFile("testdata/tiny/reference.json")
+	data, err := os.ReadFile("../testdata/tiny/reference.json")
 	if err != nil {
 		t.Fatalf("failed to read reference file: %v", err)
 	}
@@ -194,7 +194,7 @@ func TestStep_RejectsBadInput(t *testing.T) {
 }
 
 func BenchmarkStep_Tiny(b *testing.B) {
-	data, err := os.ReadFile("testdata/tiny/model.wtypw")
+	data, err := os.ReadFile("../testdata/tiny/model.wtypw")
 	if err != nil {
 		b.Fatalf("failed to read model file: %v", err)
 	}

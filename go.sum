@@ -14,3 +14,5 @@ webtyp.com/vector v0.1.1 h1:f4PsIPz5lYrXEEhbbPUz4bfd2+i7ujVGfsZRpf/G7/4=
 webtyp.com/vector v0.1.1/go.mod h1:IrRH9GrQ5Ym6DquOtuu+15W3nekNhaR8oRcdj+oDExQ=
 webtyp.com/weights v0.1.0 h1:yykXtxzbs8onP9gQbBtC/JTYkl7c+SypgPqLu74d7X4=
 webtyp.com/weights v0.1.0/go.mod h1:6Crb2n3MKU9IJHsFBEY963D/0mkWlrx9mY1WrYMQ1T8=
+webtyp.com/weights v0.2.0 h1:fQ7DcuZ5aV5239sjCz6r03k9xFlyuQGfob5RD5Jz19A=
+webtyp.com/weights v0.2.0/go.mod h1:6Crb2n3MKU9IJHsFBEY963D/0mkWlrx9mY1WrYMQ1T8=

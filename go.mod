@@ -5,7 +5,7 @@ go 1.26.8
 require (
 	webtyp.com/fmt v1.0.0
 	webtyp.com/nn v0.2.0
-	webtyp.com/weights v0.1.0
+	webtyp.com/weights v0.2.0
 )
 
 require (

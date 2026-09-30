@@ -33,6 +33,10 @@ Measured from the model's `config.json` and weights (see the ecosystem master pl
 - Gated DeltaNet layers keep a **fixed-size state** (~1 MB per layer, ~18 MB in total), however
   long the text is. This is why the model fits a browser tab even with long conversations.
 
+## Weights in memory
+
+The decoder accepts artifacts stored as Float32 or Int8Block32 (`weightsc -quant int8-block32`). Quantized 2-D weight matrices remain stored in memory as int8 blocks (with one float32 scale per 32 values) rather than dequantizing on load. Dequantizing Qwen3.5-0.8B to float32 would consume ~2 GB of memory, exceeding the heap limits available to browser tabs on 4 GB memory devices. Matrix-vector products are computed directly over int8 blocks via `nn.MatVecInt8Block32`.
+
 ## What it reuses and what is new
 
 | Piece | Where |

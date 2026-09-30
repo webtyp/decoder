@@ -30,8 +30,9 @@ var (
 	ErrInvalidConvKernel       = makeErr("decoder: Config.ConvKernel must be greater than zero")
 	ErrInvalidEps              = makeErr("decoder: Config.Eps must be greater than zero")
 
-	ErrTokenOutOfBounds  = makeErr("decoder: token out of bounds")
-	ErrLogitsLenMismatch = makeErr("decoder: logits length mismatch")
+	ErrTokenOutOfBounds    = makeErr("decoder: token out of bounds")
+	ErrLogitsLenMismatch   = makeErr("decoder: logits length mismatch")
+	ErrUnsupportedDType    = makeErr("decoder: unsupported tensor dtype")
 )
 
 // MissingTensorError returns an error formatted as "decoder: missing tensor <name>".
@@ -42,4 +43,9 @@ func MissingTensorError(name string) error {
 // WrongTensorSizeError returns an error formatted as "decoder: tensor <name> has <n> values, want <m>".
 func WrongTensorSizeError(name string, got, want int) error {
 	return makeErr(fmt.Sprintf("decoder: tensor %s has %s values, want %s", name, fmt.Sprintf("%d", got), fmt.Sprintf("%d", want)))
+}
+
+// UnsupportedDTypeError returns an error formatted as "decoder: tensor <name> has dtype <dtype>, which the decoder cannot read".
+func UnsupportedDTypeError(name, dtype string) error {
+	return fmt.ErrType(makeErr(fmt.Sprintf("decoder: tensor %s has dtype %s, which the decoder cannot read", name, dtype)), ErrUnsupportedDType)
 }

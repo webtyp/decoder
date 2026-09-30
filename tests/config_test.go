@@ -1,4 +1,4 @@
-package decoder_test
+package tests
 
 import (
 	"testing"
