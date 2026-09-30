@@ -3,8 +3,9 @@ PLAN: "feat!: read Int8Block32 weights — matrices stay int8 in memory (the rea
 TAG: v0.2.0
 EXECUTOR: jules
 REVIEWER: none
-STATUS: running
+STATUS: review
 SESSION: 8146648134492594019
+PR: https://github.com/webtyp/decoder/pull/2
 ---
 
 > This plan is dispatched via the CodeJob workflow. See skill: agents-workflow.
