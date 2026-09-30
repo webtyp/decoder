@@ -1,0 +1,68 @@
+// Converts testdata/tiny/model.safetensors (written by gen_fixture.py) into
+// testdata/tiny/model_int8b32.wtypw: every 2-D tensor in Int8Block32 (the layout of the real
+// Qwen3.5-0.8B artifact), every other tensor in Float32, the same rule as weightsc -quant int8-block32.
+//
+// Run from a scratch module that requires webtyp.com/weights and webtyp.com/weightsc:
+//   go run . testdata/tiny/model.safetensors testdata/tiny/model_int8b32.wtypw
+package main
+
+import (
+	"encoding/binary"
+	"fmt"
+	"math"
+	"os"
+	"sort"
+
+	"webtyp.com/weights"
+	"webtyp.com/weightsc"
+)
+
+func main() {
+	in, out := os.Args[1], os.Args[2]
+	st, err := weightsc.OpenSafetensors(in)
+	if err != nil {
+		panic(err)
+	}
+	defer st.Close()
+	var names []string
+	for n := range st.Tensors {
+		names = append(names, n)
+	}
+	sort.Strings(names)
+	var inputs []weights.TensorInput
+	quantized := 0
+	for _, n := range names {
+		f, shape, err := st.ReadTensorFloat32(n)
+		if err != nil {
+			panic(err)
+		}
+		if len(shape) == 2 {
+			rows, cols := shape[0], shape[1]
+			data := make([]byte, 0, rows*cols)
+			var scales []float32
+			for r := 0; r < rows; r++ {
+				q, s := weightsc.QuantizeBlocksInt8(f[r*cols : (r+1)*cols])
+				for _, v := range q {
+					data = append(data, byte(v))
+				}
+				scales = append(scales, s...)
+			}
+			inputs = append(inputs, weights.TensorInput{Name: n, DType: weights.Int8Block32, Shape: shape, Data: data, Scales: scales})
+			quantized++
+			continue
+		}
+		data := make([]byte, len(f)*4)
+		for i, v := range f {
+			binary.LittleEndian.PutUint32(data[i*4:], math.Float32bits(v))
+		}
+		inputs = append(inputs, weights.TensorInput{Name: n, DType: weights.Float32, Shape: shape, Data: data})
+	}
+	b, err := weights.WriteArtifact("qwen3.5-tiny-fixture-int8b32", 1, weights.TokenizerConfig{}, inputs)
+	if err != nil {
+		panic(err)
+	}
+	if err := os.WriteFile(out, b, 0644); err != nil {
+		panic(err)
+	}
+	fmt.Println("tensors", len(inputs), "int8b32", quantized, "bytes", len(b))
+}
