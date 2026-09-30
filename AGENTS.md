@@ -15,6 +15,8 @@ adapter (`webtyp/qwen`).
 implementation (Hugging Face `transformers`) for a tiny model of the same architecture. Never
 loosen a tolerance to make a test pass. Find the step that diverges.
 
+ops_test.go stays in the root: it tests unexported math helpers that no exported API exposes one by one.
+
 ## The builds that define "done"
 
 ```bash

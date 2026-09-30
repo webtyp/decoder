@@ -5,54 +5,57 @@ import (
 	"webtyp.com/weights"
 )
 
-// FullAttnWeights contains weights for a full attention layer.
-type FullAttnWeights struct {
-	QProj []float32 // [Heads*2*HeadDim][Hidden]
-	KProj []float32 // [KVHeads*HeadDim][Hidden]
-	VProj []float32 // [KVHeads*HeadDim][Hidden]
-	OProj []float32 // [Hidden][Heads*HeadDim]
+// fullAttnWeights contains weights for a full attention layer.
+type fullAttnWeights struct {
+	QProj matrix    // [Heads*2*HeadDim][Hidden]
+	KProj matrix    // [KVHeads*HeadDim][Hidden]
+	VProj matrix    // [KVHeads*HeadDim][Hidden]
+	OProj matrix    // [Hidden][Heads*HeadDim]
 	QNorm []float32 // [HeadDim] zero-centered (1 + w)
 	KNorm []float32 // [HeadDim] zero-centered (1 + w)
 }
 
-// LinearAttnWeights contains weights for a Gated DeltaNet layer.
-type LinearAttnWeights struct {
-	InProjQKV []float32 // [2*Kh*Kd + Vh*Vd][Hidden]
-	InProjZ   []float32 // [Vh*Vd][Hidden]
-	InProjB   []float32 // [Vh][Hidden]
-	InProjA   []float32 // [Vh][Hidden]
+// linearAttnWeights contains weights for a Gated DeltaNet layer.
+type linearAttnWeights struct {
+	InProjQKV matrix    // [2*Kh*Kd + Vh*Vd][Hidden]
+	InProjZ   matrix    // [Vh*Vd][Hidden]
+	InProjB   matrix    // [Vh][Hidden]
+	InProjA   matrix    // [Vh][Hidden]
 	Conv1D    []float32 // [2*Kh*Kd + Vh*Vd][ConvKernel]
 	ALog      []float32 // [Vh]
 	DtBias    []float32 // [Vh]
 	Norm      []float32 // [Vd] plain weight (NOT zero-centered)
-	OutProj   []float32 // [Hidden][Vh*Vd]
+	OutProj   matrix    // [Hidden][Vh*Vd]
 }
 
-// LayerWeights contains weights for a single decoder layer.
-type LayerWeights struct {
+// layerWeights contains weights for a single decoder layer.
+type layerWeights struct {
 	Kind       LayerKind
 	InputLN    []float32 // [Hidden] zero-centered (1 + w)
 	PostAttnLN []float32 // [Hidden] zero-centered (1 + w)
-	GateProj   []float32 // [Intermediate][Hidden]
-	UpProj     []float32 // [Intermediate][Hidden]
-	DownProj   []float32 // [Hidden][Intermediate]
+	GateProj   matrix    // [Intermediate][Hidden]
+	UpProj     matrix    // [Intermediate][Hidden]
+	DownProj   matrix    // [Hidden][Intermediate]
 
-	FullAttn   *FullAttnWeights
-	LinearAttn *LinearAttnWeights
+	FullAttn   *fullAttnWeights
+	LinearAttn *linearAttnWeights
 }
 
 // Model represents an immutable loaded decoder model.
 type Model struct {
 	Config Config
-	Embed  []float32 // [Vocab][Hidden]
-	Norm   []float32 // [Hidden] zero-centered (1 + w)
-	Layers []LayerWeights
+	embed  matrix
+	norm   []float32 // [Hidden] zero-centered (1 + w)
+	layers []layerWeights
 }
 
 func getTensor(a *weights.Artifact, name string, expectedLen int) ([]float32, error) {
 	t, ok := a.Tensor(name)
 	if !ok {
 		return nil, MissingTensorError(name)
+	}
+	if t.DType != weights.Float32 {
+		return nil, UnsupportedDTypeError(name, string(t.DType))
 	}
 	data, err := t.Float32s()
 	if err != nil {
@@ -78,7 +81,7 @@ func New(cfg Config, a *weights.Artifact, prefix string) (*Model, error) {
 		return nil, err
 	}
 
-	embed, err := getTensor(a, prefix+"embed_tokens.weight", cfg.Vocab*cfg.Hidden)
+	embed, err := loadMatrix(a, prefix+"embed_tokens.weight", cfg.Vocab, cfg.Hidden)
 	if err != nil {
 		return nil, err
 	}
@@ -89,7 +92,7 @@ func New(cfg Config, a *weights.Artifact, prefix string) (*Model, error) {
 	}
 	norm := makeZeroCentered(normRaw)
 
-	layers := make([]LayerWeights, len(cfg.Layers))
+	layers := make([]layerWeights, len(cfg.Layers))
 
 	Kh := cfg.LinearKeyHeads
 	Kd := cfg.LinearKeyDim
@@ -111,22 +114,22 @@ func New(cfg Config, a *weights.Artifact, prefix string) (*Model, error) {
 			return nil, err
 		}
 
-		gate, err := getTensor(a, lPrefix+"mlp.gate_proj.weight", cfg.Intermediate*cfg.Hidden)
+		gate, err := loadMatrix(a, lPrefix+"mlp.gate_proj.weight", cfg.Intermediate, cfg.Hidden)
 		if err != nil {
 			return nil, err
 		}
 
-		up, err := getTensor(a, lPrefix+"mlp.up_proj.weight", cfg.Intermediate*cfg.Hidden)
+		up, err := loadMatrix(a, lPrefix+"mlp.up_proj.weight", cfg.Intermediate, cfg.Hidden)
 		if err != nil {
 			return nil, err
 		}
 
-		down, err := getTensor(a, lPrefix+"mlp.down_proj.weight", cfg.Hidden*cfg.Intermediate)
+		down, err := loadMatrix(a, lPrefix+"mlp.down_proj.weight", cfg.Hidden, cfg.Intermediate)
 		if err != nil {
 			return nil, err
 		}
 
-		lw := LayerWeights{
+		lw := layerWeights{
 			Kind:       kind,
 			InputLN:    makeZeroCentered(inLNRaw),
 			PostAttnLN: makeZeroCentered(postLNRaw),
@@ -137,19 +140,19 @@ func New(cfg Config, a *weights.Artifact, prefix string) (*Model, error) {
 
 		switch kind {
 		case FullAttention:
-			qProj, err := getTensor(a, lPrefix+"self_attn.q_proj.weight", (cfg.Heads*2*cfg.HeadDim)*cfg.Hidden)
+			qProj, err := loadMatrix(a, lPrefix+"self_attn.q_proj.weight", cfg.Heads*2*cfg.HeadDim, cfg.Hidden)
 			if err != nil {
 				return nil, err
 			}
-			kProj, err := getTensor(a, lPrefix+"self_attn.k_proj.weight", (cfg.KVHeads*cfg.HeadDim)*cfg.Hidden)
+			kProj, err := loadMatrix(a, lPrefix+"self_attn.k_proj.weight", cfg.KVHeads*cfg.HeadDim, cfg.Hidden)
 			if err != nil {
 				return nil, err
 			}
-			vProj, err := getTensor(a, lPrefix+"self_attn.v_proj.weight", (cfg.KVHeads*cfg.HeadDim)*cfg.Hidden)
+			vProj, err := loadMatrix(a, lPrefix+"self_attn.v_proj.weight", cfg.KVHeads*cfg.HeadDim, cfg.Hidden)
 			if err != nil {
 				return nil, err
 			}
-			oProj, err := getTensor(a, lPrefix+"self_attn.o_proj.weight", cfg.Hidden*(cfg.Heads*cfg.HeadDim))
+			oProj, err := loadMatrix(a, lPrefix+"self_attn.o_proj.weight", cfg.Hidden, cfg.Heads*cfg.HeadDim)
 			if err != nil {
 				return nil, err
 			}
@@ -162,7 +165,7 @@ func New(cfg Config, a *weights.Artifact, prefix string) (*Model, error) {
 				return nil, err
 			}
 
-			lw.FullAttn = &FullAttnWeights{
+			lw.FullAttn = &fullAttnWeights{
 				QProj: qProj,
 				KProj: kProj,
 				VProj: vProj,
@@ -172,19 +175,19 @@ func New(cfg Config, a *weights.Artifact, prefix string) (*Model, error) {
 			}
 
 		case LinearAttention:
-			inQKV, err := getTensor(a, lPrefix+"linear_attn.in_proj_qkv.weight", qkvChannels*cfg.Hidden)
+			inQKV, err := loadMatrix(a, lPrefix+"linear_attn.in_proj_qkv.weight", qkvChannels, cfg.Hidden)
 			if err != nil {
 				return nil, err
 			}
-			inZ, err := getTensor(a, lPrefix+"linear_attn.in_proj_z.weight", (Vh*Vd)*cfg.Hidden)
+			inZ, err := loadMatrix(a, lPrefix+"linear_attn.in_proj_z.weight", Vh*Vd, cfg.Hidden)
 			if err != nil {
 				return nil, err
 			}
-			inB, err := getTensor(a, lPrefix+"linear_attn.in_proj_b.weight", Vh*cfg.Hidden)
+			inB, err := loadMatrix(a, lPrefix+"linear_attn.in_proj_b.weight", Vh, cfg.Hidden)
 			if err != nil {
 				return nil, err
 			}
-			inA, err := getTensor(a, lPrefix+"linear_attn.in_proj_a.weight", Vh*cfg.Hidden)
+			inA, err := loadMatrix(a, lPrefix+"linear_attn.in_proj_a.weight", Vh, cfg.Hidden)
 			if err != nil {
 				return nil, err
 			}
@@ -204,12 +207,12 @@ func New(cfg Config, a *weights.Artifact, prefix string) (*Model, error) {
 			if err != nil {
 				return nil, err
 			}
-			outProj, err := getTensor(a, lPrefix+"linear_attn.out_proj.weight", cfg.Hidden*(Vh*Vd))
+			outProj, err := loadMatrix(a, lPrefix+"linear_attn.out_proj.weight", cfg.Hidden, Vh*Vd)
 			if err != nil {
 				return nil, err
 			}
 
-			lw.LinearAttn = &LinearAttnWeights{
+			lw.LinearAttn = &linearAttnWeights{
 				InProjQKV: inQKV,
 				InProjZ:   inZ,
 				InProjB:   inB,
@@ -227,8 +230,8 @@ func New(cfg Config, a *weights.Artifact, prefix string) (*Model, error) {
 
 	return &Model{
 		Config: cfg,
-		Embed:  embed,
-		Norm:   norm,
-		Layers: layers,
+		embed:  embed,
+		norm:   norm,
+		layers: layers,
 	}, nil
 }

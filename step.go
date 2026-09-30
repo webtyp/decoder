@@ -16,11 +16,10 @@ func (m *Model) Step(st *State, token int, logits []float32) error {
 	scr := &st.Scratch
 
 	// Embed token
-	embedRow := m.Embed[token*m.Config.Hidden : (token+1)*m.Config.Hidden]
-	copy(scr.X, embedRow)
+	m.embed.row(scr.X, token)
 
 	// Process layers
-	for l, layer := range m.Layers {
+	for l, layer := range m.layers {
 		stLayer := &st.Layers[l]
 
 		// 1. Input RMSNorm
@@ -43,13 +42,13 @@ func (m *Model) Step(st *State, token int, logits []float32) error {
 		_ = nn.RMSNorm(scr.H, scr.X, layer.PostAttnLN, m.Config.Hidden, m.Config.Eps)
 
 		// 4. MLP: down · ( SiLU(gate · h) ⊙ (up · h) )
-		_ = nn.MatmulT(scr.MLPGate, scr.H, layer.GateProj, 1, m.Config.Hidden, m.Config.Intermediate)
-		_ = nn.MatmulT(scr.MLPUp, scr.H, layer.UpProj, 1, m.Config.Hidden, m.Config.Intermediate)
+		layer.GateProj.mulVec(scr.MLPGate, scr.H)
+		layer.UpProj.mulVec(scr.MLPUp, scr.H)
 		_ = nn.SiLU(scr.MLPGate)
 		for i := 0; i < m.Config.Intermediate; i++ {
 			scr.GateUp[i] = scr.MLPGate[i] * scr.MLPUp[i]
 		}
-		_ = nn.MatmulT(scr.H, scr.GateUp, layer.DownProj, 1, m.Config.Intermediate, m.Config.Hidden)
+		layer.DownProj.mulVec(scr.H, scr.GateUp)
 
 		for i := 0; i < m.Config.Hidden; i++ {
 			scr.X[i] += scr.H[i]
@@ -57,10 +56,10 @@ func (m *Model) Step(st *State, token int, logits []float32) error {
 	}
 
 	// Final RMSNorm
-	_ = nn.RMSNorm(scr.X, scr.X, m.Norm, m.Config.Hidden, m.Config.Eps)
+	_ = nn.RMSNorm(scr.X, scr.X, m.norm, m.Config.Hidden, m.Config.Eps)
 
 	// Output projection (tied with embed_tokens)
-	_ = nn.MatmulT(logits, scr.X, m.Embed, 1, m.Config.Hidden, m.Config.Vocab)
+	m.embed.mulVec(logits, scr.X)
 
 	st.Pos++
 	return nil

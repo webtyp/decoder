@@ -7,7 +7,7 @@ import (
 )
 
 // stepDeltaNet computes the Gated DeltaNet linear attention block.
-func stepDeltaNet(cfg Config, w *LinearAttnWeights, st *LayerState, scr *Scratch, h []float32) {
+func stepDeltaNet(cfg Config, w *linearAttnWeights, st *LayerState, scr *Scratch, h []float32) {
 	Kh := cfg.LinearKeyHeads
 	Kd := cfg.LinearKeyDim
 	Vh := cfg.LinearValueHeads
@@ -15,10 +15,10 @@ func stepDeltaNet(cfg Config, w *LinearAttnWeights, st *LayerState, scr *Scratch
 	qkvChannels := 2*Kh*Kd + Vh*Vd
 
 	// 1. In projections
-	_ = nn.MatmulT(scr.QKV, h, w.InProjQKV, 1, cfg.Hidden, qkvChannels)
-	_ = nn.MatmulT(scr.Z, h, w.InProjZ, 1, cfg.Hidden, Vh*Vd)
-	_ = nn.MatmulT(scr.B, h, w.InProjB, 1, cfg.Hidden, Vh)
-	_ = nn.MatmulT(scr.A, h, w.InProjA, 1, cfg.Hidden, Vh)
+	w.InProjQKV.mulVec(scr.QKV, h)
+	w.InProjZ.mulVec(scr.Z, h)
+	w.InProjB.mulVec(scr.B, h)
+	w.InProjA.mulVec(scr.A, h)
 
 	// 2. Causal conv1d on QKV
 	causalConvStep(st.ConvState, scr.QKV, w.Conv1D, qkvChannels, cfg.ConvKernel, scr.ConvOut)
@@ -72,5 +72,5 @@ func stepDeltaNet(cfg Config, w *LinearAttnWeights, st *LayerState, scr *Scratch
 	}
 
 	// 9. Out projection
-	_ = nn.MatmulT(scr.LinearProjO, scr.LinearAttnO, w.OutProj, 1, Vh*Vd, cfg.Hidden)
+	w.OutProj.mulVec(scr.LinearProjO, scr.LinearAttnO)
 }
