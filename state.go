@@ -13,11 +13,11 @@ type LayerState struct {
 
 // Scratch holds pre-allocated working buffers for a State to avoid allocations in Step.
 type Scratch struct {
-	X        []float32 // [Hidden]
-	H        []float32 // [Hidden]
-	GateUp   []float32 // [Intermediate]
-	MLPGate  []float32 // [Intermediate]
-	MLPUp    []float32 // [Intermediate]
+	X       []float32 // [Hidden]
+	H       []float32 // [Hidden]
+	GateUp  []float32 // [Intermediate]
+	MLPGate []float32 // [Intermediate]
+	MLPUp   []float32 // [Intermediate]
 
 	// FullAttention scratch
 	QG          []float32 // [Heads * 2 * HeadDim]
@@ -83,11 +83,11 @@ func newScratch(cfg Config) Scratch {
 	qkvChannels := 2*Kh*Kd + Vh*Vd
 
 	return Scratch{
-		X:           make([]float32, cfg.Hidden),
-		H:           make([]float32, cfg.Hidden),
-		GateUp:      make([]float32, cfg.Intermediate),
-		MLPGate:     make([]float32, cfg.Intermediate),
-		MLPUp:       make([]float32, cfg.Intermediate),
+		X:       make([]float32, cfg.Hidden),
+		H:       make([]float32, cfg.Hidden),
+		GateUp:  make([]float32, cfg.Intermediate),
+		MLPGate: make([]float32, cfg.Intermediate),
+		MLPUp:   make([]float32, cfg.Intermediate),
 
 		QG:          make([]float32, cfg.Heads*2*cfg.HeadDim),
 		K:           make([]float32, cfg.KVHeads*cfg.HeadDim),
@@ -108,4 +108,27 @@ func newScratch(cfg Config) Scratch {
 		LinearAttnO: make([]float32, Vh*Vd),
 		LinearProjO: make([]float32, cfg.Hidden),
 	}
+}
+
+// CopyFrom makes s the same sequence state as src: position, KV caches and recurrent states.
+// The two states share no memory afterwards, and s reuses the capacity it already has. It is
+// how a runtime keeps the state after a prompt's fixed prefix (identity and tools) and
+// resumes from it on the next turn instead of reading that prefix again. Both states must
+// come from the same Model.
+func (s *State) CopyFrom(src *State) error {
+	if len(s.Layers) != len(src.Layers) {
+		return ErrStateMismatch
+	}
+	s.Pos = src.Pos
+	for i := range src.Layers {
+		d, o := &s.Layers[i], &src.Layers[i]
+		if len(d.ConvState) != len(o.ConvState) || len(d.RecState) != len(o.RecState) {
+			return ErrStateMismatch
+		}
+		d.KCache = append(d.KCache[:0], o.KCache...)
+		d.VCache = append(d.VCache[:0], o.VCache...)
+		copy(d.ConvState, o.ConvState)
+		copy(d.RecState, o.RecState)
+	}
+	return nil
 }

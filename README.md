@@ -13,6 +13,7 @@ model, with the arithmetic in `webtyp/nn`.
 | Load a decoder model | `decoder.New(cfg, artifact, prefix)` |
 | Allocate sequence state for conversation | `model.NewState()` |
 | Step the model with a token | `model.Step(state, token, logits)` |
+| Resume from a saved state (e.g. after a fixed prompt prefix) | `state.CopyFrom(saved)` |
 
 ## Usage Example
 
