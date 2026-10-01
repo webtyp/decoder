@@ -14,6 +14,21 @@ It exists separately from `webtyp/encoder` because generating is a different job
 encoding. The decoder keeps state between tokens, predicts one token at a time, and never pools
 into a single vector.
 
+## Two architectures
+
+The decoder supports two model families via `Config.Arch`:
+
+1. **Qwen3.5** (`decoder.Qwen35`): Gated DeltaNet linear attention + gated full attention, with zero-centered `(1 + w)` RMSNorm on layernorms.
+2. **LFM2** (`decoder.LFM2`): Gated short depthwise causal convolutions (`ShortConv`) + plain full attention (`FullAttention`), followed by SwiGLU MLP.
+
+### Three key differences in LFM2
+
+1. **RMSNorm uses weights as is:** `w · x / rms(x)`. Qwen3.5 uses `(1 + w)` zero-centered weights.
+2. **Plain attention without output gate:** Query projection outputs `Heads · HeadDim` values (no output gate multiplier).
+3. **Full-head RoPE:** RoPE rotates all dimensions of each head (`RotaryDim == HeadDim`).
+
+The executable spec for the LFM2 decode step is `testdata/lfm2_reference_step.py`.
+
 ## The first model it must run: Qwen3.5-0.8B
 
 Measured from the model's `config.json` and weights (see the ecosystem master plan, D6):

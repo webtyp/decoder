@@ -39,6 +39,8 @@ type layerWeights struct {
 
 	FullAttn   *fullAttnWeights
 	LinearAttn *linearAttnWeights
+	shortConv  *shortConvWeights
+	plainAttn  *plainAttnWeights
 }
 
 // Model represents an immutable loaded decoder model.
@@ -79,6 +81,10 @@ func makeZeroCentered(w []float32) []float32 {
 func New(cfg Config, a *weights.Artifact, prefix string) (*Model, error) {
 	if err := cfg.Validate(); err != nil {
 		return nil, err
+	}
+
+	if cfg.Arch == LFM2 {
+		return newLFM2(cfg, a, prefix)
 	}
 
 	embed, err := loadMatrix(a, prefix+"embed_tokens.weight", cfg.Vocab, cfg.Hidden)

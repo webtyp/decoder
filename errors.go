@@ -14,6 +14,8 @@ func makeErr(msg string) error {
 
 // Error constants for decoder operations.
 var (
+	ErrInvalidArch             = makeErr("decoder: Config.Arch must be Qwen35 or LFM2")
+	ErrLayerKindForArch        = makeErr("decoder: a layer kind does not belong to Config.Arch")
 	ErrInvalidVocab            = makeErr("decoder: Config.Vocab must be greater than zero")
 	ErrInvalidHidden           = makeErr("decoder: Config.Hidden must be greater than zero")
 	ErrInvalidIntermediate     = makeErr("decoder: Config.Intermediate must be greater than zero")
