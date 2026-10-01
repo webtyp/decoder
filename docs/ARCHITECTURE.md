@@ -69,3 +69,13 @@ The same method `embed` used: first **correct**, then **fast**.
    compared against `llama-server` with the GGUF.
 2. Measure under TinyGo/WASM.
 3. Speed: SIMD, several Web Workers, WebGPU, in the order the measurements justify.
+
+## Speed: what a step computes
+
+Int8 matrices quantize their input vector to int8 blocks and run `nn.MatVecQ8Block32`, an integer
+dot product that WebAssembly compilers vectorize (2.1× without SIMD, 4.3× with SIMD128, measured;
+`nn/docs/PERFORMANCE.md`). It adds about 0.3 % error to the matrix products.
+
+`Step` with `nil` logits skips the output projection, the largest matrix of the model. Prompt
+tokens never need their prediction, and a decision needs only its option letters, which
+`LogitsFor` computes from the last step's state.

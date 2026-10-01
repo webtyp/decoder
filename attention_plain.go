@@ -11,12 +11,12 @@ func stepPlainAttention(cfg Config, w *plainAttnWeights, st *LayerState, scr *Sc
 	// 1. q = w.q · h (Heads * HeadDim)
 	qLen := cfg.Heads * cfg.HeadDim
 	q := scr.QG[:qLen]
-	w.q.mulVec(q, h)
+	w.q.mulVec(q, h, &scr.Quant)
 
 	// 2. k = w.k · h, v = w.v · h
 	kvDim := cfg.KVHeads * cfg.HeadDim
-	w.k.mulVec(scr.K, h)
-	w.v.mulVec(scr.V, h)
+	w.k.mulVec(scr.K, h, &scr.Quant)
+	w.v.mulVec(scr.V, h, &scr.Quant)
 
 	// Apply RMSNorm & RoPE to Q heads
 	groupSize := cfg.Heads / cfg.KVHeads
@@ -77,5 +77,5 @@ func stepPlainAttention(cfg Config, w *plainAttnWeights, st *LayerState, scr *Sc
 	}
 
 	// Out projection
-	w.o.mulVec(scr.AttnProjOut, scr.AttnOut)
+	w.o.mulVec(scr.AttnProjOut, scr.AttnOut, &scr.Quant)
 }

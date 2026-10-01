@@ -15,10 +15,10 @@ func stepDeltaNet(cfg Config, w *linearAttnWeights, st *LayerState, scr *Scratch
 	qkvChannels := 2*Kh*Kd + Vh*Vd
 
 	// 1. In projections
-	w.InProjQKV.mulVec(scr.QKV, h)
-	w.InProjZ.mulVec(scr.Z, h)
-	w.InProjB.mulVec(scr.B, h)
-	w.InProjA.mulVec(scr.A, h)
+	w.InProjQKV.mulVec(scr.QKV, h, &scr.Quant)
+	w.InProjZ.mulVec(scr.Z, h, &scr.Quant)
+	w.InProjB.mulVec(scr.B, h, &scr.Quant)
+	w.InProjA.mulVec(scr.A, h, &scr.Quant)
 
 	// 2. Causal conv1d on QKV
 	causalConvStep(st.ConvState, scr.QKV, w.Conv1D, qkvChannels, cfg.ConvKernel, scr.ConvOut)
@@ -72,5 +72,5 @@ func stepDeltaNet(cfg Config, w *linearAttnWeights, st *LayerState, scr *Scratch
 	}
 
 	// 9. Out projection
-	w.OutProj.mulVec(scr.LinearProjO, scr.LinearAttnO)
+	w.OutProj.mulVec(scr.LinearProjO, scr.LinearAttnO, &scr.Quant)
 }

@@ -14,6 +14,8 @@ model, with the arithmetic in `webtyp/nn`.
 | Load an LFM2 model | `decoder.New(Config{Arch: decoder.LFM2, ...}, artifact, prefix)` |
 | Allocate sequence state for conversation | `model.NewState()` |
 | Step the model with a token | `model.Step(state, token, logits)` |
+| Read a prompt token without its prediction (34 % faster for Qwen3.5) | `model.Step(state, token, nil)` |
+| Logits of a few tokens only (a decision's option letters) | `model.LogitsFor(state, ids, out)` |
 | Resume from a saved state (e.g. after a fixed prompt prefix) | `state.CopyFrom(saved)` |
 
 ## Usage Example

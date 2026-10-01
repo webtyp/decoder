@@ -9,12 +9,12 @@ import (
 // stepFullAttention computes the full attention block for position p.
 func stepFullAttention(cfg Config, w *fullAttnWeights, st *LayerState, scr *Scratch, p int, h []float32) {
 	// 1. qg = q_proj · h (Heads * 2 * HeadDim)
-	w.QProj.mulVec(scr.QG, h)
+	w.QProj.mulVec(scr.QG, h, &scr.Quant)
 
 	// 2. k = k_proj · h, v = v_proj · h
 	kvDim := cfg.KVHeads * cfg.HeadDim
-	w.KProj.mulVec(scr.K, h)
-	w.VProj.mulVec(scr.V, h)
+	w.KProj.mulVec(scr.K, h, &scr.Quant)
+	w.VProj.mulVec(scr.V, h, &scr.Quant)
 
 	// Split QG into per-head q and gate, apply RMSNorm & RoPE
 	groupSize := cfg.Heads / cfg.KVHeads
@@ -85,5 +85,5 @@ func stepFullAttention(cfg Config, w *fullAttnWeights, st *LayerState, scr *Scra
 	}
 
 	// Out projection
-	w.OProj.mulVec(scr.AttnProjOut, scr.AttnOut)
+	w.OProj.mulVec(scr.AttnProjOut, scr.AttnOut, &scr.Quant)
 }

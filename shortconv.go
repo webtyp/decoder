@@ -6,7 +6,7 @@ func stepShortConv(cfg Config, w *shortConvWeights, st *LayerState, scr *Scratch
 	K := cfg.ConvKernel
 	kMinus1 := K - 1
 
-	w.inProj.mulVec(scr.BCX, h)
+	w.inProj.mulVec(scr.BCX, h, &scr.Quant)
 
 	B := scr.BCX[:H]
 	C := scr.BCX[H : 2*H]
@@ -33,5 +33,5 @@ func stepShortConv(cfg Config, w *shortConvWeights, st *LayerState, scr *Scratch
 		scr.ConvY[c] = C[c] * y
 	}
 
-	w.outProj.mulVec(scr.LinearProjO, scr.ConvY)
+	w.outProj.mulVec(scr.LinearProjO, scr.ConvY, &scr.Quant)
 }

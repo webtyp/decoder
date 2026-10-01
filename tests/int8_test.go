@@ -97,7 +97,9 @@ func TestInt8Model(t *testing.T) {
 		if err := modelF32.Step(stF32, tok, logitsF32); err != nil {
 			t.Fatalf("f32 model step %d failed: %v", i, err)
 		}
-		checkLogitsMatch(t, "kernel_exactness", logitsInt8, logitsF32, 1e-4)
+		// The int8 path also quantizes each input vector to int8 blocks (nn.MatVecQ8Block32), so it
+		// differs from the dequantized float weights by that rounding: measured 0.05 here.
+		checkLogitsMatch(t, "activation_quantization", logitsInt8, logitsF32, 0.1)
 	}
 
 	// 3. Quantization error against reference.json
@@ -126,8 +128,10 @@ func TestInt8Model(t *testing.T) {
 	}
 
 	t.Logf("Measured max abs logit diff against reference: %g", maxAbsDiff)
-	if maxAbsDiff >= 0.15 {
-		t.Fatalf("max abs logit diff %g exceeds threshold 0.15", maxAbsDiff)
+	// Weights in int8 blocks (measured 0.0998 in PyTorch) plus the input quantized to int8 blocks
+	// (decoder v0.5.0): measured 0.145; the greedy tokens above still match at every position.
+	if maxAbsDiff >= 0.2 {
+		t.Fatalf("max abs logit diff %g exceeds threshold 0.2", maxAbsDiff)
 	}
 
 	// 4. Zero allocations during Step

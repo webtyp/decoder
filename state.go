@@ -43,6 +43,11 @@ type Scratch struct {
 	// LFM2 scratch
 	BCX   []float32 // [3 * Hidden]
 	ConvY []float32 // [Hidden]
+
+	// Quant holds the current input vector quantized to int8 blocks (matrix.mulVec), and
+	// RowTmp one dequantized weight row (LogitsFor). Both are sized for the widest matrix.
+	Quant  quantBuf
+	RowTmp []float32
 }
 
 // State holds the mutable sequence state across steps.
@@ -82,7 +87,15 @@ func (m *Model) NewState() *State {
 }
 
 func newScratch(cfg Config) Scratch {
+	widest := cfg.Hidden
+	for _, w := range []int{cfg.Intermediate, cfg.Heads * cfg.HeadDim, cfg.LinearValueHeads * cfg.LinearValueDim} {
+		if w > widest {
+			widest = w
+		}
+	}
 	scr := Scratch{
+		Quant:   quantBuf{xq: make([]int8, widest), xs: make([]float32, (widest+31)/32)},
+		RowTmp:  make([]float32, cfg.Hidden),
 		X:       make([]float32, cfg.Hidden),
 		H:       make([]float32, cfg.Hidden),
 		GateUp:  make([]float32, cfg.Intermediate),
