@@ -3,6 +3,8 @@ PLAN: "feat!: LFM2 architecture (short convolutions + plain attention) next to Q
 TAG: v0.4.0
 EXECUTOR: jules
 REVIEWER: none
+STATUS: running
+SESSION: 10258586629535649290
 ---
 
 > This plan is dispatched via the CodeJob workflow. See skill: agents-workflow.
