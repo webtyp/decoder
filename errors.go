@@ -21,6 +21,7 @@ var (
 	ErrInvalidIntermediate     = makeErr("decoder: Config.Intermediate must be greater than zero")
 	ErrEmptyLayers             = makeErr("decoder: Config.Layers must not be empty")
 	ErrStateMismatch           = makeErr("decoder: the two states come from different models")
+	ErrStateFormat             = makeErr("decoder: the bytes are not a saved decoder state")
 	ErrInvalidHeads            = makeErr("decoder: Config.Heads must be greater than zero")
 	ErrInvalidKVHeads          = makeErr("decoder: Config.KVHeads must divide Config.Heads")
 	ErrInvalidHeadDim          = makeErr("decoder: Config.HeadDim must be greater than zero")
