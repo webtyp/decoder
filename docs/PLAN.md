@@ -3,8 +3,9 @@ PLAN: "feat!: LFM2 architecture (short convolutions + plain attention) next to Q
 TAG: v0.4.0
 EXECUTOR: jules
 REVIEWER: none
-STATUS: running
+STATUS: review
 SESSION: 10258586629535649290
+PR: https://github.com/webtyp/decoder/pull/3
 ---
 
 > This plan is dispatched via the CodeJob workflow. See skill: agents-workflow.
