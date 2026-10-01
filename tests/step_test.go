@@ -20,6 +20,7 @@ type referenceData struct {
 
 func tinyConfig() decoder.Config {
 	return decoder.Config{
+		Arch:             decoder.Qwen35,
 		Vocab:            256,
 		Hidden:           64,
 		Intermediate:     128,

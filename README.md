@@ -10,7 +10,8 @@ model, with the arithmetic in `webtyp/nn`.
 
 | I want to... | Use... |
 |---|---|
-| Load a decoder model | `decoder.New(cfg, artifact, prefix)` |
+| Load a Qwen3.5 model | `decoder.New(Config{Arch: decoder.Qwen35, ...}, artifact, prefix)` |
+| Load an LFM2 model | `decoder.New(Config{Arch: decoder.LFM2, ...}, artifact, prefix)` |
 | Allocate sequence state for conversation | `model.NewState()` |
 | Step the model with a token | `model.Step(state, token, logits)` |
 | Resume from a saved state (e.g. after a fixed prompt prefix) | `state.CopyFrom(saved)` |
@@ -18,7 +19,10 @@ model, with the arithmetic in `webtyp/nn`.
 ## Usage Example
 
 ```go
-cfg := decoder.Config{ ... }
+cfg := decoder.Config{
+	Arch: decoder.Qwen35,
+	// ...
+}
 art, _ := weights.Open(data)
 model, err := decoder.New(cfg, art, "model.language_model.")
 if err != nil {

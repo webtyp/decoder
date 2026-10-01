@@ -26,13 +26,23 @@ func (m *Model) Step(st *State, token int, logits []float32) error {
 		_ = nn.RMSNorm(scr.H, scr.X, layer.InputLN, m.Config.Hidden, m.Config.Eps)
 
 		// 2. Token mixer
-		if layer.Kind == FullAttention {
-			stepFullAttention(m.Config, layer.FullAttn, stLayer, scr, st.Pos, scr.H)
+		switch layer.Kind {
+		case FullAttention:
+			if m.Config.Arch == LFM2 {
+				stepPlainAttention(m.Config, layer.plainAttn, stLayer, scr, st.Pos, scr.H)
+			} else {
+				stepFullAttention(m.Config, layer.FullAttn, stLayer, scr, st.Pos, scr.H)
+			}
 			for i := 0; i < m.Config.Hidden; i++ {
 				scr.X[i] += scr.AttnProjOut[i]
 			}
-		} else {
+		case LinearAttention:
 			stepDeltaNet(m.Config, layer.LinearAttn, stLayer, scr, scr.H)
+			for i := 0; i < m.Config.Hidden; i++ {
+				scr.X[i] += scr.LinearProjO[i]
+			}
+		case ShortConv:
+			stepShortConv(m.Config, layer.shortConv, stLayer, scr, scr.H)
 			for i := 0; i < m.Config.Hidden; i++ {
 				scr.X[i] += scr.LinearProjO[i]
 			}

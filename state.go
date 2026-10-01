@@ -39,6 +39,10 @@ type Scratch struct {
 	DeltaO      []float32 // [Vd]
 	LinearAttnO []float32 // [Vh * Vd]
 	LinearProjO []float32 // [Hidden]
+
+	// LFM2 scratch
+	BCX   []float32 // [3 * Hidden]
+	ConvY []float32 // [Hidden]
 }
 
 // State holds the mutable sequence state across steps.
@@ -68,6 +72,8 @@ func (m *Model) NewState() *State {
 		if kind == LinearAttention {
 			ls.ConvState = make([]float32, qkvChannels*kMinus1)
 			ls.RecState = make([]float32, Vh*Kd*Vd)
+		} else if kind == ShortConv {
+			ls.ConvState = make([]float32, m.Config.Hidden*kMinus1)
 		}
 		st.Layers[i] = ls
 	}
@@ -76,13 +82,7 @@ func (m *Model) NewState() *State {
 }
 
 func newScratch(cfg Config) Scratch {
-	Kh := cfg.LinearKeyHeads
-	Kd := cfg.LinearKeyDim
-	Vh := cfg.LinearValueHeads
-	Vd := cfg.LinearValueDim
-	qkvChannels := 2*Kh*Kd + Vh*Vd
-
-	return Scratch{
+	scr := Scratch{
 		X:       make([]float32, cfg.Hidden),
 		H:       make([]float32, cfg.Hidden),
 		GateUp:  make([]float32, cfg.Intermediate),
@@ -96,18 +96,32 @@ func newScratch(cfg Config) Scratch {
 		AttnGate:    make([]float32, cfg.Heads*cfg.HeadDim),
 		AttnProjOut: make([]float32, cfg.Hidden),
 		AttnScores:  make([]float32, 0, 1024),
-
-		QKV:         make([]float32, qkvChannels),
-		ConvOut:     make([]float32, qkvChannels),
-		Z:           make([]float32, Vh*Vd),
-		B:           make([]float32, Vh),
-		A:           make([]float32, Vh),
-		DeltaMem:    make([]float32, Vd),
-		Delta:       make([]float32, Vd),
-		DeltaO:      make([]float32, Vd),
-		LinearAttnO: make([]float32, Vh*Vd),
-		LinearProjO: make([]float32, cfg.Hidden),
 	}
+
+	if cfg.Arch == Qwen35 {
+		Kh := cfg.LinearKeyHeads
+		Kd := cfg.LinearKeyDim
+		Vh := cfg.LinearValueHeads
+		Vd := cfg.LinearValueDim
+		qkvChannels := 2*Kh*Kd + Vh*Vd
+
+		scr.QKV = make([]float32, qkvChannels)
+		scr.ConvOut = make([]float32, qkvChannels)
+		scr.Z = make([]float32, Vh*Vd)
+		scr.B = make([]float32, Vh)
+		scr.A = make([]float32, Vh)
+		scr.DeltaMem = make([]float32, Vd)
+		scr.Delta = make([]float32, Vd)
+		scr.DeltaO = make([]float32, Vd)
+		scr.LinearAttnO = make([]float32, Vh*Vd)
+		scr.LinearProjO = make([]float32, cfg.Hidden)
+	} else if cfg.Arch == LFM2 {
+		scr.BCX = make([]float32, 3*cfg.Hidden)
+		scr.ConvY = make([]float32, cfg.Hidden)
+		scr.LinearProjO = make([]float32, cfg.Hidden)
+	}
+
+	return scr
 }
 
 // CopyFrom makes s the same sequence state as src: position, KV caches and recurrent states.
