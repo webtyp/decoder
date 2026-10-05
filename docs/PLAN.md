@@ -3,6 +3,8 @@ PLAN: "feat: matrices in Int4Block32 — the decoder runs 4-bit weights with nn.
 TAG: v0.6.0
 EXECUTOR: jules
 REVIEWER: none
+STATUS: running
+SESSION: 7957285222733311376
 ---
 
 > This plan is dispatched via the CodeJob workflow. See skill: agents-workflow.
