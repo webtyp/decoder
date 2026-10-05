@@ -6,10 +6,7 @@ REVIEWER: none
 ---
 
 > This plan is dispatched via the CodeJob workflow. See skill: agents-workflow.
->
-> **WAITS** for `webtyp.com/weights` v0.4.0 (`Int4Block32`, `QuantizeInt4Block32`,
-> `DequantInt4Block32`) and `webtyp.com/nn` v0.5.0 (`MatVecQ4Block32`), both dispatched
-> 2026-10-05. Rename to `docs/PLAN.md` to dispatch once both are published.
+
 
 # Plan — `decoder` v0.6.0: 4-bit matrices
 
