@@ -13,6 +13,7 @@ type matrix struct {
 	f32        []float32 // Float32 storage, rows×cols
 	q          []byte    // Int8Block32 storage, rows×cols int8 values
 	scales     []float32 // Int8Block32 scales, rows×ceil(cols/32)
+	q4         bool      // q holds Int4Block32 (rows×cols/2 bytes) instead of Int8Block32
 }
 
 // quantBuf holds an input vector quantized to int8 blocks, for the int8 × int8 kernel.
@@ -27,10 +28,13 @@ type quantBuf struct {
 // the float kernel.
 func (m matrix) mulVec(dst, x []float32, qb *quantBuf) {
 	switch {
-	case m.q != nil && m.cols%nn.Int8BlockSize == 0:
+	case m.q4:
+		_ = nn.QuantizeBlocks32(qb.xq[:m.cols], qb.xs[:m.cols/nn.Int8BlockSize], x[:m.cols])
+		_ = nn.MatVecQ4Block32(dst, qb.xq, qb.xs, m.q, m.scales, m.rows, m.cols)
+	case !m.q4 && m.q != nil && m.cols%nn.Int8BlockSize == 0:
 		_ = nn.QuantizeBlocks32(qb.xq[:m.cols], qb.xs[:m.cols/nn.Int8BlockSize], x[:m.cols])
 		_ = nn.MatVecQ8Block32(dst, qb.xq, qb.xs, m.q, m.scales, m.rows, m.cols)
-	case m.q != nil:
+	case !m.q4 && m.q != nil:
 		_ = nn.MatVecInt8Block32(dst, x, m.q, m.scales, m.rows, m.cols)
 	default:
 		_ = nn.MatmulT(dst, x, m.f32, 1, m.cols, m.rows)
@@ -52,7 +56,9 @@ func (m matrix) rowsDot(out []float32, rows []int, x []float32, tmp []float32) {
 
 // row writes row i of W into dst as float32 (the embedding lookup of a token).
 func (m matrix) row(dst []float32, i int) {
-	if m.q != nil {
+	if m.q4 {
+		weights.DequantInt4Block32(dst[:m.cols], m.q[i*m.cols/2:(i+1)*m.cols/2], m.scales[i*m.cols/32:(i+1)*m.cols/32])
+	} else if m.q != nil {
 		blocksPerRow := (m.cols + weights.BlockSize - 1) / weights.BlockSize
 		qRow := m.q[i*m.cols : (i+1)*m.cols]
 		scaleRow := m.scales[i*blocksPerRow : (i+1)*blocksPerRow]
@@ -93,6 +99,25 @@ func loadMatrix(a *weights.Artifact, name string, rows, cols int) (matrix, error
 			rows: rows,
 			cols: cols,
 			f32:  data,
+		}, nil
+
+	case weights.Int4Block32:
+		if cols%weights.BlockSize != 0 {
+			return matrix{}, fmt.ErrType(makeErr(fmt.Sprintf("%s: %s", name, weights.ErrInt4Cols.Error())), weights.ErrInt4Cols)
+		}
+		if len(t.Data) != expectedLen/2 {
+			return matrix{}, WrongTensorSizeError(name, len(t.Data), expectedLen/2)
+		}
+		expectedScales := rows * (cols / 32)
+		if len(t.Scales) != expectedScales {
+			return matrix{}, fmt.ErrType(makeErr(fmt.Sprintf("%s: %s", name, weights.ErrScalesMismatch.Error())), weights.ErrScalesMismatch)
+		}
+		return matrix{
+			rows:   rows,
+			cols:   cols,
+			q:      t.Data,
+			scales: t.Scales,
+			q4:     true,
 		}, nil
 
 	case weights.Int8Block32:
