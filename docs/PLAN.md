@@ -3,8 +3,9 @@ PLAN: "feat: matrices in Int4Block32 — the decoder runs 4-bit weights with nn.
 TAG: v0.6.0
 EXECUTOR: jules
 REVIEWER: none
-STATUS: running
+STATUS: review
 SESSION: 7957285222733311376
+PR: https://github.com/webtyp/decoder/pull/4
 ---
 
 > This plan is dispatched via the CodeJob workflow. See skill: agents-workflow.
@@ -97,3 +98,6 @@ one with `weights.QuantizeInt4Block32`); every other tensor is copied as is; wri
 | 2 | `matrix.go` | int4 storage, kernel, row |
 | 3 | `tests/int4_test.go` | table green |
 | 4 | `README.md` | documented |
+
+## Executor notes
+The entire plan was executed successfully as prescribed. All int4 test scenarios passed perfectly without regressions on the preexisting int8 tests, zero allocation logic held steady, and matrix changes were made as ordered. The README was correctly amended to reflect Int4Block32 usage.

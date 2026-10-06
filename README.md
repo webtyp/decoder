@@ -39,7 +39,7 @@ logits := make([]float32, model.Config.Vocab)
 err = model.Step(st, tokenID, logits)
 ```
 
-The artifact may be Float32 or Int8Block32 (`weightsc -quant int8-block32`), and int8 matrices stay int8 in memory.
+The artifact may be Float32, Int8Block32 (`weightsc -quant int8-block32`), or Int4Block32 (`weightsc -quant int4-block32`), and quantized matrices stay quantized in memory.
 
 ## Documentation
 
